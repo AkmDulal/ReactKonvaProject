@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ACTIONS } from "./constants";
@@ -12,12 +11,12 @@ import {
   Arrow,
   Transformer,
 } from "react-konva";
-import { Stage as KonvaStage } from "konva/lib/Stage";
 import { TbRectangle } from "react-icons/tb";
 import { IoMdDownload } from "react-icons/io";
 import { GiArrowCursor } from "react-icons/gi";
 import { FaRegCircle } from "react-icons/fa6";
 import { KonvaEventObject } from "konva/lib/Node";
+import Konva from "konva";
 
 interface Shape {
   id: string;
@@ -63,8 +62,8 @@ const initialAppState: AppState = {
 };
 
 export default function Home() {
-  const stageRef = useRef<any>(null);
-  const transformerRef = useRef<any>(null);
+  const stageRef = useRef<Konva.Stage>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
   const currentShapeId = useRef<string | null>(null);
   const isPaining = useRef<boolean>(false);
   const historyStateRef = useRef<HistoryState>({
@@ -75,7 +74,28 @@ export default function Home() {
   const [action, setAction] = useState<string>(ACTIONS.SELECT);
   const [fillColor, setFillColor] = useState<string>("#ff0000");
   const [draftState, setDraftState] = useState<AppState | null>(null);
+  // const [historyState, setHistoryState] = useState<HistoryState>(() => {
+  //   const savedHistory = localStorage.getItem("drawingHistory");
+  //   const savedIndex = localStorage.getItem("drawingHistoryIndex");
+  //   if (savedHistory && savedIndex !== null) {
+  //     return {
+  //       history: JSON.parse(savedHistory),
+  //       currentIndex: parseInt(savedIndex),
+  //     };
+  //   }
+  //   return {
+  //     history: [initialAppState],
+  //     currentIndex: 0,
+  //   };
+  // });
+
   const [historyState, setHistoryState] = useState<HistoryState>(() => {
+    if (typeof window === 'undefined') {
+      return {
+        history: [initialAppState],
+        currentIndex: 0,
+      };
+    }
     const savedHistory = localStorage.getItem("drawingHistory");
     const savedIndex = localStorage.getItem("drawingHistoryIndex");
     if (savedHistory && savedIndex !== null) {
@@ -89,6 +109,7 @@ export default function Home() {
       currentIndex: 0,
     };
   });
+  
 
   useEffect(() => {
     historyStateRef.current = historyState;
@@ -105,6 +126,7 @@ export default function Home() {
   const isDraggable = action === ACTIONS.SELECT;
 
   function handleExport() {
+    if (!stageRef.current) return;
     const uri = stageRef.current.toDataURL();
     const link = document.createElement("a");
     link.download = "image.png";
@@ -115,15 +137,17 @@ export default function Home() {
   }
 
   function onClick(e: KonvaEventObject<Event>) {
-    if (action !== ACTIONS.SELECT) return;
+    if (action !== ACTIONS.SELECT || !transformerRef.current) return;
     transformerRef.current.nodes([e.currentTarget]);
   }
 
   function onPointerDown() {
-    if (action === ACTIONS.SELECT) return;
+    if (action === ACTIONS.SELECT || !stageRef.current) return; 
 
     const stage = stageRef.current;
-    const { x, y } = stage.getPointerPosition();
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+    const { x, y } = pos;
     const id = uuidv4();
     currentShapeId.current = id;
     isPaining.current = true;
@@ -149,10 +173,12 @@ export default function Home() {
   }
 
   function onPointerMove() {
-    if (!isPaining.current || !draftState) return;
+    if (!isPaining.current || !draftState || !stageRef.current) return;
 
     const stage = stageRef.current;
-    const { x, y } = stage.getPointerPosition();
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+    const { x, y } = pos;
     const updatedDraft = { ...draftState };
 
     switch (action) {
@@ -190,11 +216,14 @@ export default function Home() {
     setDraftState(null);
   }
 
+
   useEffect(() => {
+    if (typeof window === "undefined") return;
+  
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
-        
+  
         if (e.key === "z") {
           setHistoryState((prev) => ({
             ...prev,
@@ -203,18 +232,42 @@ export default function Home() {
         } else if (e.key === "y") {
           setHistoryState((prev) => ({
             ...prev,
-            currentIndex: Math.min(
-              prev.currentIndex + 1,
-              prev.history.length - 1
-            ),
+            currentIndex: Math.min(prev.currentIndex + 1, prev.history.length - 1),
           }));
         }
       }
     };
-
+  
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+  
+
+  // useEffect(() => {
+  //   const handleKeyDown = (e: KeyboardEvent) => {
+  //     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+  //       e.preventDefault();
+        
+  //       if (e.key === "z") {
+  //         setHistoryState((prev) => ({
+  //           ...prev,
+  //           currentIndex: Math.max(prev.currentIndex - 1, 0),
+  //         }));
+  //       } else if (e.key === "y") {
+  //         setHistoryState((prev) => ({
+  //           ...prev,
+  //           currentIndex: Math.min(
+  //             prev.currentIndex + 1,
+  //             prev.history.length - 1
+  //           ),
+  //         }));
+  //       }
+  //     }
+  //   };
+
+  //   window.addEventListener("keydown", handleKeyDown);
+  //   return () => window.removeEventListener("keydown", handleKeyDown);
+  // }, []);
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
@@ -251,8 +304,8 @@ export default function Home() {
       {/* Canvas */}
       <Stage
         ref={stageRef}
-        width={window.innerWidth}
-        height={window.innerHeight}
+        width={typeof window === "undefined" ? 0 : window.innerWidth}
+        height={typeof window === "undefined" ? 0 : window.innerHeight}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
