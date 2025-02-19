@@ -74,20 +74,6 @@ export default function Home() {
   const [action, setAction] = useState<string>(ACTIONS.SELECT);
   const [fillColor, setFillColor] = useState<string>("#ff0000");
   const [draftState, setDraftState] = useState<AppState | null>(null);
-  // const [historyState, setHistoryState] = useState<HistoryState>(() => {
-  //   const savedHistory = localStorage.getItem("drawingHistory");
-  //   const savedIndex = localStorage.getItem("drawingHistoryIndex");
-  //   if (savedHistory && savedIndex !== null) {
-  //     return {
-  //       history: JSON.parse(savedHistory),
-  //       currentIndex: parseInt(savedIndex),
-  //     };
-  //   }
-  //   return {
-  //     history: [initialAppState],
-  //     currentIndex: 0,
-  //   };
-  // });
 
   const [historyState, setHistoryState] = useState<HistoryState>(() => {
     if (typeof window === 'undefined') {
@@ -241,39 +227,12 @@ export default function Home() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-  
-
-  // useEffect(() => {
-  //   const handleKeyDown = (e: KeyboardEvent) => {
-  //     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-  //       e.preventDefault();
-        
-  //       if (e.key === "z") {
-  //         setHistoryState((prev) => ({
-  //           ...prev,
-  //           currentIndex: Math.max(prev.currentIndex - 1, 0),
-  //         }));
-  //       } else if (e.key === "y") {
-  //         setHistoryState((prev) => ({
-  //           ...prev,
-  //           currentIndex: Math.min(
-  //             prev.currentIndex + 1,
-  //             prev.history.length - 1
-  //           ),
-  //         }));
-  //       }
-  //     }
-  //   };
-
-  //   window.addEventListener("keydown", handleKeyDown);
-  //   return () => window.removeEventListener("keydown", handleKeyDown);
-  // }, []);
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Toolbar */}
+
       <div className="absolute top-0 z-10 w-full py-2">
-        <div className="flex justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg">
+        <div className="flex text-[#222] justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg">
           {[
             { icon: <GiArrowCursor size={"2rem"} />, type: ACTIONS.SELECT },
             { icon: <TbRectangle size={"2rem"} />, type: ACTIONS.RECTANGLE },
@@ -282,7 +241,7 @@ export default function Home() {
             <button
               key={type}
               className={`p-2 rounded ${
-                action === type ? "bg-gray-300" : "bg-white"
+                action === type ? "bg-[#0a66c2] !text-[#fff]" : "bg-white"
               }`}
               onClick={() => setAction(type)}
             >
@@ -301,7 +260,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Canvas */}
       <Stage
         ref={stageRef}
         width={typeof window === "undefined" ? 0 : window.innerWidth}
